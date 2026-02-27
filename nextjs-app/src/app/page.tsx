@@ -153,14 +153,35 @@ export default function LaptopPage() {
           const pc = createPeer();
 
           pc.ontrack = (ev) => {
-            const stream = ev.streams?.[0];
-            if (!stream) return;
-            remoteStreamRef.current = stream;
+            const track = ev.track;
+            if (!track) return;
+            // On some mobile browsers ev.streams can be empty; always use the track.
+            let stream = ev.streams?.[0];
+            if (!stream || stream.getTracks().length === 0) {
+              stream = new MediaStream([track]);
+            } else if (!stream.getTracks().includes(track)) {
+              stream.addTrack(track);
+            }
+            const existing = remoteStreamRef.current;
+            if (existing && existing !== stream) {
+              if (!existing.getTracks().includes(track))
+                existing.addTrack(track);
+              stream = existing;
+            } else {
+              remoteStreamRef.current = stream;
+            }
             const attach = () => {
-              if (videoRef.current) {
-                videoRef.current.srcObject = stream;
+              if (videoRef.current && remoteStreamRef.current) {
+                videoRef.current.srcObject = remoteStreamRef.current;
                 videoRef.current.muted = muted;
-                void videoRef.current.play().catch(() => {});
+                const v = videoRef.current;
+                void v.play().catch(() => {});
+                // Mobile-sent streams sometimes need play() after first frame
+                const onCanPlay = () => {
+                  void v.play().catch(() => {});
+                  v.removeEventListener('canplay', onCanPlay);
+                };
+                v.addEventListener('canplay', onCanPlay);
               }
             };
             attach();
@@ -280,10 +301,25 @@ export default function LaptopPage() {
 
   // Sync remote stream to video when connected (handles ontrack firing before ref is set)
   useEffect(() => {
-    if (status !== 'connected' || !remoteStreamRef.current || !videoRef.current) return;
-    videoRef.current.srcObject = remoteStreamRef.current;
-    videoRef.current.muted = muted;
-    void videoRef.current.play().catch(() => {});
+    if (status !== 'connected' || !remoteStreamRef.current || !videoRef.current)
+      return;
+    const video = videoRef.current;
+    const stream = remoteStreamRef.current;
+    video.srcObject = stream;
+    video.muted = muted;
+    const play = () => void video.play().catch(() => {});
+    play();
+    // Mobile-sent streams often deliver first frame later; retry play when ready
+    const onCanPlay = () => {
+      play();
+      video.removeEventListener('canplay', onCanPlay);
+    };
+    video.addEventListener('canplay', onCanPlay);
+    const t = setTimeout(play, 800);
+    return () => {
+      video.removeEventListener('canplay', onCanPlay);
+      clearTimeout(t);
+    };
   }, [status, muted]);
 
   useEffect(() => {
