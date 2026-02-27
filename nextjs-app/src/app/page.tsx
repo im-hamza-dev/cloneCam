@@ -156,11 +156,15 @@ export default function LaptopPage() {
             const stream = ev.streams?.[0];
             if (!stream) return;
             remoteStreamRef.current = stream;
-            if (videoRef.current) {
-              videoRef.current.srcObject = stream;
-              videoRef.current.muted = muted;
-              void videoRef.current.play().catch(() => {});
-            }
+            const attach = () => {
+              if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                videoRef.current.muted = muted;
+                void videoRef.current.play().catch(() => {});
+              }
+            };
+            attach();
+            requestAnimationFrame(attach);
             setStatus('connected');
           };
 
@@ -202,12 +206,17 @@ export default function LaptopPage() {
 
         socket.off('offer');
         socket.on('offer', async (offer) => {
-          const pc = ensurePeer();
-          await pc.setRemoteDescription(new RTCSessionDescription(offer));
-          await drainIceQueue(pc);
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          socket.emit('answer', pc.localDescription);
+          try {
+            const pc = ensurePeer();
+            await pc.setRemoteDescription(new RTCSessionDescription(offer));
+            await drainIceQueue(pc);
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            socket.emit('answer', pc.localDescription);
+          } catch (err) {
+            console.error('Laptop: offer handling failed', err);
+            setStatus('disconnected');
+          }
         });
 
         socket.off('answer');
@@ -268,6 +277,14 @@ export default function LaptopPage() {
     if (!videoRef.current) return;
     videoRef.current.muted = muted;
   }, [muted]);
+
+  // Sync remote stream to video when connected (handles ontrack firing before ref is set)
+  useEffect(() => {
+    if (status !== 'connected' || !remoteStreamRef.current || !videoRef.current) return;
+    videoRef.current.srcObject = remoteStreamRef.current;
+    videoRef.current.muted = muted;
+    void videoRef.current.play().catch(() => {});
+  }, [status, muted]);
 
   useEffect(() => {
     if (!expanded) return;
