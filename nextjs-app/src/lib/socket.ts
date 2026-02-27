@@ -1,16 +1,17 @@
 import { io, type Socket } from "socket.io-client";
+import { SIGNAL_URL } from "./constants";
 
 let socket: Socket | null = null;
 
 /** Base URL for the signal server. Same value on server and client to avoid hydration mismatch. */
 export function getSignalUrl(): string {
- return 'http://192.168.18.249:3001'
+ return SIGNAL_URL
 }
 
 /** True when socket will use same-origin /signal proxy (only call from client). */
 export function isUsingSignalProxy(): boolean {
   if (typeof window === "undefined") return false;
-  return !process.env.NEXT_PUBLIC_SIGNAL_URL;
+  return !SIGNAL_URL;
 }
 
 export function getSocket(): Socket {
@@ -21,7 +22,7 @@ export function getSocket(): Socket {
   const useProxy =
     !hasDirectUrl &&
     typeof window !== "undefined" &&
-    !process.env.NEXT_PUBLIC_SIGNAL_URL;
+    !SIGNAL_URL;
 
   const isNgrok =
     hasDirectUrl &&

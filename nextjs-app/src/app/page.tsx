@@ -34,6 +34,7 @@ export default function LaptopPage() {
   const [selectedQuality, setSelectedQuality] = useState<Quality>('720p');
   const [muted, setMuted] = useState<boolean>(false);
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
+  const [expanded, setExpanded] = useState<boolean>(false);
 
   const mobileUrl = useMemo(() => {
     if (!roomId) return '';
@@ -275,6 +276,15 @@ export default function LaptopPage() {
     videoRef.current.muted = muted;
   }, [muted]);
 
+  useEffect(() => {
+    if (!expanded) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setExpanded(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [expanded]);
+
   const emitFlipCamera = () => {
     if (!roomId) return;
     const socket = getSocket();
@@ -331,20 +341,42 @@ export default function LaptopPage() {
       <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 px-5 pb-10 lg:grid-cols-2">
         {/* Left: video + controls */}
         <div className="rounded-2xl border border-slate-800 bg-[#0b1220] p-4">
-          <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+          <div
+            className={
+              expanded
+                ? 'fixed inset-0 z-50 flex items-center justify-center bg-black'
+                : 'relative aspect-video w-full overflow-hidden rounded-xl bg-black'
+            }
+          >
             <video
               ref={videoRef}
               playsInline
               autoPlay
-              className="h-full w-full object-cover"
+              className={
+                expanded
+                  ? 'h-full w-full object-contain'
+                  : 'h-full w-full object-cover'
+              }
               muted={muted}
             />
 
-            {connected ? (
+            {expanded && (
+              <button
+                type="button"
+                onClick={() => setExpanded(false)}
+                className="absolute right-4 top-4 rounded-lg bg-slate-800/90 px-3 py-2 text-sm font-semibold text-slate-200 ring-1 ring-slate-600 hover:bg-slate-700"
+                aria-label="Exit fullscreen"
+              >
+                Exit fullscreen
+              </button>
+            )}
+
+            {connected && (
               <div className="absolute left-3 top-3 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-500/30">
                 LIVE
               </div>
-            ) : (
+            )}
+            {!connected && !expanded && (
               <div className="absolute inset-0 grid place-items-center">
                 <div className="flex flex-col items-center gap-3 rounded-xl bg-slate-950/60 px-4 py-3 ring-1 ring-slate-800">
                   {status === 'creating' && (
@@ -407,6 +439,15 @@ export default function LaptopPage() {
                 disabled={!roomId || status !== 'connected'}
               >
                 Flip Camera
+              </button>
+              <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                className="rounded-lg bg-slate-950/30 px-3 py-1.5 text-xs font-semibold text-slate-200 ring-1 ring-slate-800 transition hover:ring-slate-700 disabled:opacity-50"
+                disabled={!roomId || status !== 'connected'}
+                title="Expand to full width/height"
+              >
+                Expand
               </button>
             </div>
 

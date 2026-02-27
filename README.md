@@ -86,7 +86,8 @@ Control plane (Socket.io, laptop → mobile):
 - **Signaling server**: deploy to Railway (or any Node host)
   - Set `PORT` if your platform requires it (server defaults to `3001`)
 - **Next.js app**: deploy to Vercel
-  - Set `NEXT_PUBLIC_SIGNAL_URL` to your deployed signaling server URL (https)
+  - In Vercel → Project → Settings → Environment Variables, add **`NEXT_PUBLIC_SIGNAL_URL`** = your signal server’s **HTTPS** URL (e.g. `https://your-app.railway.app`).
+  - Required: the app is served over HTTPS, so the signal URL must be **https://** (browsers block mixed content: HTTPS page → `ws://`).
 
 ## Notes / limitations
 

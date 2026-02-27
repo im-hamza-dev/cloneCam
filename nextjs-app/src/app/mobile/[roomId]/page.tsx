@@ -19,7 +19,7 @@ function qualityToConstraints(quality: Quality) {
 }
 
 const SECURE_CONTEXT_MSG =
-  "Camera requires a secure page (HTTPS or localhost). From your phone, open this app over HTTPS.";
+  "Camera needs a secure page. On your phone you must use HTTPS, not http://.";
 
 function getMediaDevices(): MediaDevices {
   if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
@@ -304,9 +304,14 @@ export default function MobilePage() {
           <div className="absolute left-4 right-4 top-14 rounded-lg bg-rose-950/90 px-3 py-3 text-xs text-rose-200 ring-1 ring-rose-500/30">
             <p className="font-medium">{errorMessage}</p>
             {errorMessage === SECURE_CONTEXT_MSG && (
-              <p className="mt-2 text-rose-300/90">
-                Local: use a tunnel (e.g. ngrok, Cloudflare Tunnel) so the phone opens <strong>https://…</strong>. Or deploy the app to Vercel for HTTPS.
-              </p>
+              <div className="mt-3 space-y-2 text-rose-300/90">
+                <p className="font-medium">Fix for local + phone:</p>
+                <ol className="list-decimal space-y-1 pl-4">
+                  <li>On your laptop, run: <code className="rounded bg-black/30 px-1">ngrok http 3000</code></li>
+                  <li>Open the <strong>https://</strong> URL from ngrok on your phone (same Wi‑Fi).</li>
+                  <li>Scan the new QR code or use the new link so the mobile page also loads over HTTPS.</li>
+                </ol>
+              </div>
             )}
           </div>
         )}
