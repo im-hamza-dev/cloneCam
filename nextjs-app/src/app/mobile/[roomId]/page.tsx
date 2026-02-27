@@ -63,6 +63,7 @@ export default function MobilePage() {
   const facingRef = useRef<FacingMode>("user");
   const qualityRef = useRef<Quality>("720p");
   const tracksAddedRef = useRef<boolean>(false);
+  const initialOfferSentRef = useRef<boolean>(false);
 
   const [status, setStatus] = useState<"waiting" | "live" | "error">("waiting");
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -79,6 +80,7 @@ export default function MobilePage() {
     closePeer();
     resetSocket();
     tracksAddedRef.current = false;
+    initialOfferSentRef.current = false;
     if (streamRef.current) {
       for (const t of streamRef.current.getTracks()) t.stop();
       streamRef.current = null;
@@ -159,17 +161,16 @@ export default function MobilePage() {
           const local = streamRef.current;
           if (!local) return;
 
+          // Use onnegotiationneeded only for renegotiation (flip camera, etc.), not initial offer
           pc.onnegotiationneeded = async () => {
-            if (makingOffer) return;
+            if (!initialOfferSentRef.current || makingOffer) return;
             try {
               makingOffer = true;
               const offer = await pc.createOffer();
               await pc.setLocalDescription(offer);
               socket.emit("offer", pc.localDescription);
-              setErrorMessage("");
-              setStatus("live");
             } catch (e) {
-              setErrorMessage(e instanceof Error ? e.message : "Offer failed");
+              setErrorMessage(e instanceof Error ? e.message : "Renegotiation failed");
               setStatus("error");
             } finally {
               makingOffer = false;
@@ -181,6 +182,21 @@ export default function MobilePage() {
               pc.addTrack(track, local);
             }
             tracksAddedRef.current = true;
+            // Send initial offer explicitly so both tracks are in the offer (avoids race with onnegotiationneeded)
+            try {
+              makingOffer = true;
+              const offer = await pc.createOffer();
+              await pc.setLocalDescription(offer);
+              socket.emit("offer", pc.localDescription);
+              setErrorMessage("");
+              setStatus("live");
+              initialOfferSentRef.current = true;
+            } catch (e) {
+              setErrorMessage(e instanceof Error ? e.message : "Offer failed");
+              setStatus("error");
+            } finally {
+              makingOffer = false;
+            }
           }
         });
 
@@ -255,6 +271,7 @@ export default function MobilePage() {
 
         socket.off("peer-disconnected");
         socket.on("peer-disconnected", () => {
+          initialOfferSentRef.current = false;
           setErrorMessage("");
           setStatus("waiting");
           cleanup();

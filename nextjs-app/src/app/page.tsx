@@ -152,6 +152,20 @@ export default function LaptopPage() {
         const ensurePeer = () => {
           const pc = createPeer();
 
+          const attachStreamAndPlay = () => {
+            if (videoRef.current && remoteStreamRef.current) {
+              videoRef.current.srcObject = remoteStreamRef.current;
+              videoRef.current.muted = muted;
+              const v = videoRef.current;
+              void v.play().catch(() => {});
+              const onCanPlay = () => {
+                void v.play().catch(() => {});
+                v.removeEventListener('canplay', onCanPlay);
+              };
+              v.addEventListener('canplay', onCanPlay);
+            }
+          };
+
           pc.ontrack = (ev) => {
             const track = ev.track;
             if (!track) return;
@@ -170,22 +184,12 @@ export default function LaptopPage() {
             } else {
               remoteStreamRef.current = stream;
             }
-            const attach = () => {
-              if (videoRef.current && remoteStreamRef.current) {
-                videoRef.current.srcObject = remoteStreamRef.current;
-                videoRef.current.muted = muted;
-                const v = videoRef.current;
-                void v.play().catch(() => {});
-                // Mobile-sent streams sometimes need play() after first frame
-                const onCanPlay = () => {
-                  void v.play().catch(() => {});
-                  v.removeEventListener('canplay', onCanPlay);
-                };
-                v.addEventListener('canplay', onCanPlay);
-              }
+            // When track gets first frame (e.g. after ICE connected), play again
+            track.onunmute = () => {
+              attachStreamAndPlay();
             };
-            attach();
-            requestAnimationFrame(attach);
+            attachStreamAndPlay();
+            requestAnimationFrame(attachStreamAndPlay);
             setStatus('connected');
           };
 
@@ -202,6 +206,9 @@ export default function LaptopPage() {
             const st = pcRef.current.connectionState;
             if (st === 'disconnected' || st === 'failed' || st === 'closed') {
               setStatus('disconnected');
+            } else if (st === 'connected') {
+              // Media only flows after ICE connected; re-attach and play to fix intermittent black screen
+              attachStreamAndPlay();
             }
           };
 
