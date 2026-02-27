@@ -17,15 +17,15 @@ export function getSocket(): Socket {
   if (socket) return socket;
 
   const url = getSignalUrl();
-  const isLocalhost = url.includes("localhost") || url.includes("127.0.0.1");
+  const hasDirectUrl = url.startsWith("http://") || url.startsWith("https://");
   const useProxy =
-    !isLocalhost &&
+    !hasDirectUrl &&
     typeof window !== "undefined" &&
     !process.env.NEXT_PUBLIC_SIGNAL_URL;
 
   const isNgrok =
-    !isLocalhost &&
-    /ngrok-free\.app|ngrok-free\.dev|ngrok\.io/.test(useProxy ? window.location.origin : url);
+    hasDirectUrl &&
+    /ngrok-free\.app|ngrok-free\.dev|ngrok\.io/.test(url);
 
   const baseOpts = {
     autoConnect: false,

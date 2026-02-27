@@ -66,20 +66,27 @@ export default function LaptopPage() {
         const timeoutMs = 8000;
         const isNgrokOrigin =
           typeof window !== 'undefined' &&
-          /ngrok-free\.app|ngrok-free\.dev|ngrok\.io/.test(window.location.origin);
+          /ngrok-free\.app|ngrok-free\.dev|ngrok\.io/.test(
+            window.location.origin,
+          );
         const fetchHeaders: HeadersInit = {
           ...(isNgrokOrigin && { 'ngrok-skip-browser-warning': 'true' }),
         };
 
-        async function fetchRoomId(url: string, signal: AbortSignal): Promise<string> {
+        async function fetchRoomId(
+          url: string,
+          signal: AbortSignal,
+        ): Promise<string> {
           const resp = await fetch(url, {
             cache: 'no-store',
             signal,
             headers: fetchHeaders,
           });
-          if (!resp.ok) throw new Error(`Signal server returned ${resp.status}`);
+          if (!resp.ok)
+            throw new Error(`Signal server returned ${resp.status}`);
           const text = (await resp.text()).trim().toUpperCase();
-          if (!text || text.length > 10) throw new Error('Invalid room response');
+          if (!text || text.length > 10)
+            throw new Error('Invalid room response');
           return text;
         }
 
@@ -94,13 +101,13 @@ export default function LaptopPage() {
           const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
           try {
             if (useProxyFirst) {
-              id = await fetchRoomId('/signal/create-room', controller.signal);
+              id = await fetchRoomId('/create-room', controller.signal);
             } else {
               id = await fetchRoomId(directUrl, controller.signal);
             }
           } catch (firstErr) {
             clearTimeout(timeoutId);
-            const fallbackUrl = useProxyFirst ? directUrl : '/signal/create-room';
+            const fallbackUrl = useProxyFirst ? directUrl : '/create-room';
             const controller2 = new AbortController();
             const timeoutId2 = setTimeout(() => controller2.abort(), timeoutMs);
             try {
