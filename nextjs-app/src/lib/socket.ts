@@ -4,7 +4,7 @@ let socket: Socket | null = null;
 
 /** Base URL for the signal server. Same value on server and client to avoid hydration mismatch. */
 export function getSignalUrl(): string {
- return 'http://localhost:3001'
+ return 'http://192.168.18.249:3001'
 }
 
 /** True when socket will use same-origin /signal proxy (only call from client). */
