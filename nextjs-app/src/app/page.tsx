@@ -92,23 +92,16 @@ export default function LaptopPage() {
         }
 
         const directUrl = `${signalUrl.replace(/\/$/, '')}/create-room`;
-        const useProxyFirst =
-          typeof window !== 'undefined' &&
-          !/localhost|127\.0\.0\.1/.test(signalUrl);
 
         let id: string;
         try {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
           try {
-            if (useProxyFirst) {
-              id = await fetchRoomId('/create-room', controller.signal);
-            } else {
-              id = await fetchRoomId(directUrl, controller.signal);
-            }
+            id = await fetchRoomId(directUrl, controller.signal);
           } catch (firstErr) {
             clearTimeout(timeoutId);
-            const fallbackUrl = useProxyFirst ? directUrl : '/create-room';
+            const fallbackUrl = directUrl;
             const controller2 = new AbortController();
             const timeoutId2 = setTimeout(() => controller2.abort(), timeoutMs);
             try {
