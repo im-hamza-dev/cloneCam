@@ -4,9 +4,10 @@ import QRCode from 'qrcode';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getSignalUrl, getSocket, resetSocket } from '@/lib/socket';
 import { usePeer } from '@/lib/usePeer';
+import FAQSection from '@/app/components/FAQSection';
+import Footer from '@/app/components/Footer';
 
 type Status = 'creating' | 'waiting' | 'connected' | 'disconnected';
-type Quality = '360p' | '720p' | '1080p';
 
 function statusDotClass(status: Status) {
   switch (status) {
@@ -31,7 +32,6 @@ export default function LaptopPage() {
   const [createError, setCreateError] = useState<string>('');
   const [roomId, setRoomId] = useState<string>('');
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
-  const [selectedQuality, setSelectedQuality] = useState<Quality>('720p');
   const [muted, setMuted] = useState<boolean>(false);
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
   const [expanded, setExpanded] = useState<boolean>(false);
@@ -345,14 +345,6 @@ export default function LaptopPage() {
     socket.emit('flip-camera');
   };
 
-  const emitQuality = (q: Quality) => {
-    setSelectedQuality(q);
-    if (!roomId) return;
-    const socket = getSocket();
-    if (!socket.connected) return;
-    socket.emit('change-quality', { quality: q });
-  };
-
   const copyMobileUrl = async () => {
     if (!mobileUrl) return;
     try {
@@ -372,24 +364,28 @@ export default function LaptopPage() {
             className={`h-2.5 w-2.5 rounded-full ${statusDotClass(status)}`}
           />
           <div className="flex flex-col">
-            <span className="text-sm font-semibold tracking-wide">SnapCam</span>
+            <span className="text-xl font-semibold tracking-wide">CamCast</span>
             <span className="text-xs text-slate-400">
-              {status === 'creating' && 'creating…'}
-              {status === 'waiting' && 'waiting…'}
-              {status === 'connected' && 'connected'}
+              {status === 'creating' && 'Starting your camera session…'}
+              {status === 'waiting' && 'Waiting for phone…'}
+              {status === 'connected' && 'Phone connected - streaming live'}
               {status === 'disconnected' && 'disconnected'}
             </span>
           </div>
         </div>
-        <div className="text-xs text-slate-400">
-          Signal: <span className="text-slate-200">{signalUrl}</span>
-          {signalConnected ? (
-            <span className="ml-2 text-emerald-400">● connected</span>
-          ) : (
-            <span className="ml-2 text-amber-400">● not connected</span>
-          )}
-        </div>
       </header>
+
+      <section className="mx-auto w-full max-w-6xl px-5 pb-6">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-100 sm:text-4xl">
+          Your Phone Camera. Your Google Meet. Zero Setup.
+        </h1>
+        <p className="mt-3 max-w-2xl text-base text-slate-300 sm:text-lg">
+          CamCast streams your iPhone or Android camera to your laptop browser
+          over Wi-Fi - then our Chrome extension feeds it directly into Google
+          Meet, Zoom, or Teams as a virtual webcam. No app download. No USB
+          cable. Just scan and go.
+        </p>
+      </section>
 
       <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 px-5 pb-10 lg:grid-cols-2">
         {/* Left: video + controls */}
@@ -436,7 +432,7 @@ export default function LaptopPage() {
                     <>
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300/20 border-t-slate-200" />
                       <span className="text-sm text-slate-200">
-                        Creating room…
+                        Starting your camera session…
                       </span>
                     </>
                   )}
@@ -465,27 +461,7 @@ export default function LaptopPage() {
           </div>
 
           <div className="mt-4 grid gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-300">
-                  Quality
-                </span>
-                {(['360p', '720p', '1080p'] as const).map((q) => (
-                  <button
-                    key={q}
-                    onClick={() => emitQuality(q)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold ring-1 transition ${
-                      selectedQuality === q
-                        ? 'bg-slate-200 text-slate-950 ring-slate-200'
-                        : 'bg-slate-950/30 text-slate-200 ring-slate-800 hover:ring-slate-700'
-                    }`}
-                    disabled={!roomId || status === 'creating'}
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <button
                 onClick={emitFlipCamera}
                 className="rounded-lg bg-slate-950/30 px-3 py-1.5 text-xs font-semibold text-slate-200 ring-1 ring-slate-800 transition hover:ring-slate-700 disabled:opacity-50"
@@ -500,7 +476,7 @@ export default function LaptopPage() {
                 disabled={!roomId || status !== 'connected'}
                 title="Expand to full width/height"
               >
-                Expand
+                Fullscreen
               </button>
             </div>
 
@@ -513,14 +489,14 @@ export default function LaptopPage() {
                     : 'bg-slate-950/30 text-slate-200 ring-slate-800 hover:ring-slate-700'
                 }`}
               >
-                {muted ? 'Unmute Audio' : 'Mute Audio'}
+                {muted ? 'Unmute' : 'Mute'}
               </button>
 
               <button
                 onClick={cleanup}
                 className="rounded-lg bg-rose-500/15 px-3 py-2 text-sm font-semibold text-rose-200 ring-1 ring-rose-500/30 transition hover:bg-rose-500/20"
               >
-                Disconnect
+                End Session
               </button>
             </div>
           </div>
@@ -531,14 +507,14 @@ export default function LaptopPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-sm font-semibold text-slate-100">
-                Scan to connect
+                Scan with your phone camera
               </div>
               <div className="mt-1 text-xs text-slate-400">
-                Open on your phone (same Wi‑Fi).
+                Open on your phone - no app needed
               </div>
             </div>
             <div className="rounded-lg bg-slate-950/30 px-3 py-1.5 text-xs font-semibold text-slate-200 ring-1 ring-slate-800">
-              Room: <span className="tracking-widest">{roomId || '—'}</span>
+              Room: <span className="tracking-widest">{roomId || '-'}</span>
             </div>
           </div>
 
@@ -547,7 +523,7 @@ export default function LaptopPage() {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={qrDataUrl}
-                alt="QR code"
+                alt="QR code to open CamCast on your phone - scan with your phone camera, no app needed"
                 className="h-64 w-64 rounded-lg"
               />
             ) : (
@@ -570,45 +546,59 @@ export default function LaptopPage() {
                 className="shrink-0 rounded-lg bg-slate-200 px-3 py-2 text-xs font-semibold text-slate-950 transition hover:bg-white disabled:opacity-50"
                 disabled={!mobileUrl}
               >
-                {copyState === 'copied' ? 'Copied' : 'Copy'}
+                {copyState === 'copied' ? 'Copied' : 'Copy phone link'}
               </button>
-            </div>
-            <div className="mt-2 text-xs text-slate-500">
-              If the phone can’t connect, set{' '}
-              <span className="text-slate-300">NEXT_PUBLIC_SIGNAL_URL</span> to
-              your laptop’s LAN IP (not localhost).
             </div>
           </div>
 
-          {status === 'waiting' && (
-            <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-950/20 px-3 py-2 text-xs text-amber-200">
-              <strong>Phone open but still waiting?</strong> Laptop and phone
-              must use the <em>same</em> Signal URL. With ngrok: set{' '}
-              <code className="rounded bg-slate-800 px-1">
-                NEXT_PUBLIC_SIGNAL_URL
-              </code>{' '}
-              in{' '}
-              <code className="rounded bg-slate-800 px-1">
-                nextjs-app/.env.local
-              </code>{' '}
-              to your <strong>signal</strong> tunnel URL (port 3001), restart{' '}
-              <code className="rounded bg-slate-800 px-1">npm run dev</code>,
-              then reload this page.
-            </div>
-          )}
           <div className="mt-5">
             <div className="text-sm font-semibold text-slate-100">
-              How to use
+              How to Use Your Phone as a Webcam in 4 Steps
             </div>
             <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-slate-300">
-              <li>Run the signaling server on your laptop.</li>
-              <li>Open this page on the laptop browser.</li>
-              <li>Scan the QR code on your phone.</li>
-              <li>Keep the mobile page open. You should see LIVE here.</li>
+              <li>
+                <span className="font-medium text-slate-200">
+                  Open CamCast on your laptop browser
+                </span>
+                <span className="block pl-0 text-slate-400">
+                  No account needed. Works in Chrome, Edge, and Brave.
+                </span>
+              </li>
+              <li>
+                <span className="font-medium text-slate-200">
+                  Scan the QR code with your phone
+                </span>
+                <span className="block pl-0 text-slate-400">
+                  Open your phone camera and scan - no app download required on
+                  mobile.
+                </span>
+              </li>
+              <li>
+                <span className="font-medium text-slate-200">
+                  Your phone camera streams live to your laptop
+                </span>
+                <span className="block pl-0 text-slate-400">
+                  Low-latency WebRTC connection over your local Wi-Fi. Switch
+                  between front and rear camera anytime.
+                </span>
+              </li>
+              <li>
+                <span className="font-medium text-slate-200">
+                  Select CamCast as your webcam in Google Meet
+                </span>
+                <span className="block pl-0 text-slate-400">
+                  Install the free CamCast Chrome extension once. Then choose
+                  &quot;CamCast Camera&quot; as your video source in Google
+                  Meet, Zoom, or Teams.
+                </span>
+              </li>
             </ol>
           </div>
         </aside>
       </section>
+
+      <FAQSection />
+      <Footer />
     </main>
   );
 }

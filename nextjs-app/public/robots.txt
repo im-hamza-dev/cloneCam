@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://cam-cast.vercel.app/sitemap.xml
